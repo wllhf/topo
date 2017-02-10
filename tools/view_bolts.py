@@ -20,7 +20,7 @@ for i, f in enumerate(file_names):
     gt = skimage.io.imread(os.path.join(PATH, SET, "gt_class", f))
     labels, num = skimage.measure.label(gt, background=0, return_num=True, connectivity=2)
 
-    for l in range(num):
+    for l in range(1, num):
         center = tbx_bbox.bbox_center(tbx_bbox.mask_to_bbox(labels == l))
         samples.append(np.array([i, center[0], center[1]]))
 
