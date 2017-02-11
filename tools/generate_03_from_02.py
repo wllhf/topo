@@ -11,8 +11,9 @@ from ..img_toolbox import sample as tbx_sample
 PATH_02 = "topo_data/set_02_falc"
 PATH_03 = "topo_data/set_03"
 
-PATCH_SIZE = [50, 50]
-RATIO = 2.0
+FLATTENED = False
+PATCH_SIZE = [48, 48]
+RATIO = 1.0
 
 if __name__ == '__main__':
     file_names = sorted(os.listdir(os.path.join(PATH_02, "gt_class")))
@@ -40,7 +41,7 @@ if __name__ == '__main__':
     # generate bolt samples
     patches_t = []
     for i, img in enumerate(imgs):
-        patches_t.append(tbx_sample.at(img, samples_t[samples_t[:, 0] == i, 1:], PATCH_SIZE, True, True, False))
+        patches_t.append(tbx_sample.at(img, samples_t[samples_t[:, 0] == i, 1:], PATCH_SIZE, FLATTENED, True, False))
     patches_t = np.vstack(patches_t)
 
     # subsample
@@ -50,7 +51,7 @@ if __name__ == '__main__':
     # generate wall samples
     patches_f = []
     for i, img in enumerate(imgs):
-        patches_f.append(tbx_sample.at(img, samples_f[samples_f[:, 0] == i, 1:], PATCH_SIZE, True, True, False))
+        patches_f.append(tbx_sample.at(img, samples_f[samples_f[:, 0] == i, 1:], PATCH_SIZE, FLATTENED, True, False))
     patches_f = np.vstack(patches_f)
 
     # stack em up
