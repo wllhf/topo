@@ -12,8 +12,8 @@ BATCH_SIZE = 100
 SPLIT_RATIO = 0.5
 
 # load
-samples = np.load(os.path.join(PATH, "flattened_patches_balanced.npy"))
-labels = np.load(os.path.join(PATH, "flattened_labels_balanced.npy"))
+samples = np.load(os.path.join(PATH, "50_flat_bal_patch.npy"))
+labels = np.load(os.path.join(PATH, "50_flat_bal_label.npy"))
 
 # stats
 n, d = samples.shape[0], samples.shape[1]

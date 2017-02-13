@@ -1,6 +1,7 @@
 from __future__ import division
 
 import os
+import time
 
 import numpy as np
 import tensorflow as tf
@@ -33,8 +34,8 @@ def max_pool_2x2(x):
 
 
 # load
-samples = np.load(os.path.join(PATH, "patches.npy"))
-labels = np.load(os.path.join(PATH, "labels.npy"))
+samples = np.load(os.path.join(PATH, "48_bal_patch.npy"))
+labels = np.load(os.path.join(PATH, "48_bal_label.npy"))
 
 # stats
 n = samples.shape[0]
@@ -61,9 +62,15 @@ samples, labels = samples[indices, :], labels[indices, :]
 train = (samples[:ntrain, :], labels[:ntrain, :])
 test = (samples[ntrain:, :], labels[ntrain:, :])
 
-# tensorflow
+# tensorflow session
 sess = tf.InteractiveSession()
-x = tf.placeholder(tf.float32, shape=[None, patch_size[0], patch_size[1], nchannels])
+
+# input
+with tf.name_scope('input'):
+    x = tf.placeholder(tf.float32, shape=[None, patch_size[0], patch_size[1], nchannels])
+tf.summary.image('input', x, 5)
+
+# output
 y_ = tf.placeholder(tf.float32, shape=[None, nclasses])
 
 # first layer
@@ -93,13 +100,25 @@ W_fc2 = weight_variable([1024, nclasses])
 b_fc2 = bias_variable([nclasses])
 y_conv = tf.matmul(h_fc1_drop, W_fc2) + b_fc2
 
-# training
+# end nodes
 cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y_conv, y_))
 train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
-correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
-accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-sess.run(tf.global_variables_initializer())
 
+with tf.name_scope('accuracy'):
+    with tf.name_scope('correct_prediction'):
+        correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
+    with tf.name_scope('accuracy'):
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+tf.summary.scalar('accuracy', accuracy)
+
+# tensorboard
+merged = tf.summary.merge_all()
+tb_writer = tf.summary.FileWriter("/tmp/tensorflow/topo/03_2l_conv/" + str(int(time.time())), sess.graph)
+
+# init
+tf.global_variables_initializer().run()
+
+# run
 for i in range(EPOCHS):
     idx = i % (ntrain // BATCH_SIZE)
     s, e = idx * BATCH_SIZE, (idx + 1) * BATCH_SIZE
@@ -109,8 +128,11 @@ for i in range(EPOCHS):
         train_accuracy = accuracy.eval(feed_dict={x: batch[0].astype('float32'), y_: batch[1], keep_prob: 1.0})
         print("step %d, training accuracy %g" % (i, train_accuracy))
 
-    train_step.run(feed_dict={x: batch[0].astype('float32'), y_: batch[1], keep_prob: 0.5})
+    summary, _ = sess.run([merged, train_step], feed_dict={x: batch[0].astype('float32'), y_: batch[1], keep_prob: 0.5})
+    tb_writer.add_summary(summary, i)
 
 
 # testing
 print("test accuracy %g" % accuracy.eval(feed_dict={x: test[0].astype('float32'), y_: test[1], keep_prob: 1.0}))
+
+tb_writer.close()
