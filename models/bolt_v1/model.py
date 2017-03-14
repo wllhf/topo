@@ -1,9 +1,11 @@
+from __future__ import division
+
 import tensorflow as tf
 
 FILTER_SIZE = [5, 5]
 DIM_1L = 32
 DIM_2L = 64
-DIM_FUL = 1024
+DIM_1F = 1024
 PS1 = 8
 SS1 = 4
 PS2 = 8
@@ -55,15 +57,16 @@ def inference(x, patch_size, nclasses, keep_prob_ph):
 
     # first fully connected layer
     with tf.name_scope('first_fully'):
-        W_fc1 = weight_variable([patch_size[0] // (SS1 * SS2) * patch_size[1] // (SS1 * SS2) * 64, 1024])
-        b_fc1 = bias_variable([DIM_FUL])
-        h_pool2_flat = tf.reshape(h_pool2, [-1, patch_size[0] // (SS1 * SS2) * patch_size[1] // (SS1 * SS2) * 64])
+        dim_in = patch_size[0] // (SS1 * SS2) * patch_size[1] // (SS1 * SS2) * DIM_2L
+        W_fc1 = weight_variable([dim_in, DIM_1F])
+        b_fc1 = bias_variable([DIM_1F])
+        h_pool2_flat = tf.reshape(h_pool2, [-1, dim_in])
         h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
         h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob_ph)
 
     # output layer
     with tf.name_scope('output'):
-        W_fc2 = weight_variable([DIM_FUL, nclasses])
+        W_fc2 = weight_variable([DIM_1F, nclasses])
         b_fc2 = bias_variable([nclasses])
         y_est = tf.matmul(h_fc1_drop, W_fc2) + b_fc2
 
@@ -76,7 +79,6 @@ def loss(y_target, y_est):
 
 
 def train(loss):
-    tf.summary.scalar('loss', loss)  # summary to track loss over time
     train_op = tf.train.AdamOptimizer(1e-4).minimize(loss)
     return train_op
 
