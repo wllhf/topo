@@ -12,17 +12,23 @@ PATH_02 = "topo_data/set_02_falc"
 PATH_03 = "topo_data/set_03"
 
 FLATTENED = False
-PATCH_SIZE = [48, 48]
+PATCH_SIZE = [60, 60]
 RATIO = 1.0
 
-if __name__ == '__main__':
-    file_names = sorted(os.listdir(os.path.join(PATH_02, "gt_class")))
-    imgs = tbx_io.load_images(os.path.join(PATH_02, "images"), file_names)
 
+def sampling(set_type='train'):
+    if set_type == 'train':
+        file_list = sorted(open(os.path.join(PATH_02, "splits", "train.txt"), 'r').read().splitlines())
+    elif set_type == 'test':
+        file_list = sorted(open(os.path.join(PATH_02, "splits", "test.txt"), 'r').read().splitlines())
+    elif set_type == 'valid':
+        file_list = sorted(open(os.path.join(PATH_02, "splits", "valid.txt"), 'r').read().splitlines())
+
+    imgs = tbx_io.load_images(os.path.join(PATH_02, "images"), file_list)
     # sample
     samples_t = []
     samples_f = []
-    for i, f in enumerate(file_names):
+    for i, f in enumerate(file_list):
         gt = skimage.io.imread(os.path.join(PATH_02, "gt_class", f))
 
         # true
@@ -41,7 +47,9 @@ if __name__ == '__main__':
     # generate bolt samples
     patches_t = []
     for i, img in enumerate(imgs):
-        patches_t.append(tbx_sample.at(img, samples_t[samples_t[:, 0] == i, 1:], PATCH_SIZE, FLATTENED, True, False))
+        patches = tbx_sample.at(img, samples_t[samples_t[:, 0] == i, 1:], PATCH_SIZE, FLATTENED, True, False)
+        if patches.shape[0]:
+            patches_t.append(patches)
     patches_t = np.vstack(patches_t)
 
     # subsample
@@ -51,16 +59,26 @@ if __name__ == '__main__':
     # generate wall samples
     patches_f = []
     for i, img in enumerate(imgs):
-        patches_f.append(tbx_sample.at(img, samples_f[samples_f[:, 0] == i, 1:], PATCH_SIZE, FLATTENED, True, False))
+        patches = tbx_sample.at(img, samples_f[samples_f[:, 0] == i, 1:], PATCH_SIZE, FLATTENED, True, False)
+        if patches.shape[0]:
+            patches_f.append(patches)
     patches_f = np.vstack(patches_f)
 
     # stack em up
     labels = np.vstack([np.ones((patches_t.shape[0], 1), dtype='uint8'), np.zeros((patches_f.shape[0], 1), dtype='uint8')])
     patches = np.vstack([patches_t, patches_f])
 
-    # save set
-    if not os.path.exists(PATH_03):
-        os.makedirs(PATH_03)
+    return patches, labels
 
-    np.save(os.path.join(PATH_03, "labels"), labels)
-    np.save(os.path.join(PATH_03, "patches"), patches)
+
+if __name__ == '__main__':
+
+    for set_type in ['train', 'test', 'valid']:
+        patches, labels = sampling(set_type)
+
+        # save set
+        if not os.path.exists(PATH_03):
+            os.makedirs(PATH_03)
+
+        np.save(os.path.join(PATH_03, str(PATCH_SIZE[0]) + "_bal_label_" + set_type), labels)
+        np.save(os.path.join(PATH_03, str(PATCH_SIZE[0]) + "_bal_patch_" + set_type), patches)
